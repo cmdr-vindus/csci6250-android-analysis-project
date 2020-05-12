@@ -1,0 +1,8 @@
+{
+  "name": "googlePlayGrabber",
+  "version": "1.0.0",
+  "dependencies": {
+    "google-play-scraper": "latest",
+    "lodash": "^4.17.15"
+  }
+}
