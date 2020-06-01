@@ -8,6 +8,7 @@ from mlxtend.frequent_patterns import association_rules, fpgrowth
 from pathlib import Path
 import matplotlib.pyplot as plt
 import seaborn as sns
+import collections
 
 
 class Analyzer:
@@ -129,6 +130,174 @@ class Analyzer:
             return {
                 genre+'_cwe_info': self.cwe_count_by_genre(genre)
                 }
+    
+    def headers_code_analysis(self):
+        found_code_analysis = self.get_defined_key_found_values("code_analysis")
+        #print('found_code_analysis : '+str(type(found_code_analysis)))
+        
+        code_headers = {}
+        code_items_list = []
+        for subdict in found_code_analysis:
+            #print(subdict)
+            #print('value : '+str(type(value)))
+            for header in subdict:
+                if header in code_headers:
+                    code_headers[header] = code_headers[header] + 1
+                else:
+                    code_headers[header] = 1
+            '''
+            for k,v in subdict.items():
+                if "path" in k:
+                    instances = len(v)
+                    if 'count' in code_items:
+                        code_items['count'] = code_items['count'] + instances
+                    else:
+                        code_items['count'] = instances
+                
+                if "level" in k:
+                    code_items['level'] = v
+                if "cvss" in k:
+                    code_items['cvss'] = v
+                if 'cwe' in k:
+                    code_items['cwe'] = v
+                if 'owasp' in k:
+                    code_items['owasp'] = v
+            '''
+                #code_items_list.append(code_items)
+                #code_items.clear()
+        print(json.dumps(code_headers, indent=4))
+        return code_headers
+    
+    def levels_code_analysis(self):
+        found_code_analysis = self.get_defined_key_found_values("code_analysis")
+        levels_collector = []
+        code_levels = {}
+        for subdict in found_code_analysis:
+            levels_collector.append(self.extract_values(subdict, 'level'))
+            
+        for section in levels_collector:
+            for level in section:
+                if level in code_levels:
+                    code_levels[level] = code_levels[level] + 1
+                else:
+                    code_levels[level] = 1
+            
+        print(json.dumps(code_levels, indent=4))
+        return code_levels
+
+    def owasp_code_analysis(self):
+        found_code_analysis = self.get_defined_key_found_values("code_analysis")
+        owasp_collector = []
+        code_owasps = {}
+        for subdict in found_code_analysis:
+            owasp_collector.append(self.extract_values(subdict, 'owasp'))
+            
+        for section in owasp_collector:
+            for owasp in section:
+                if owasp in code_owasps:
+                    code_owasps[owasp] = code_owasps[owasp] + 1
+                else:
+                    code_owasps[owasp] = 1
+                    
+        print(json.dumps(code_owasps, indent=4))
+        return code_owasps
+    
+    def cvss_code_analysis(self):
+        found_code_analysis = self.get_defined_key_found_values("code_analysis")
+        cvss_collector = []
+        code_cvss = {}
+        for subdict in found_code_analysis:
+            cvss_collector.append(self.extract_values(subdict, 'cvss'))
+            
+        for section in cvss_collector:
+            for cvss in section:
+                if cvss in code_cvss:
+                    code_cvss[cvss] = code_cvss[cvss] + 1
+                else:
+                    code_cvss[cvss] = 1
+                    
+        print(json.dumps(code_cvss, indent=4))
+        return code_cvss
+    
+    def deep_code_analysis(self):
+        found_code_analysis = self.get_defined_key_found_values("code_analysis")
+        code_analysis_collector = []
+        code_dict = {}
+        offense = None
+        for subdict in found_code_analysis:
+            for header in subdict:
+                offense = header
+                if header not in code_dict:
+                    code_dict['offense'] = offense
+                #assuming it is in the dictionary
+                code_dict['app_occ'] = len(self.extract_values(subdict, offense))
+                
+                if 'occurances' in code_dict:
+                    code_dict['occurances'] = code_dict['occurances'] + len(self.extract_values(subdict,'path'))
+                else:
+                    code_dict['occurances'] = len(self.extract_values(subdict,'path'))
+                    
+                print(json.dumps(code_dict, indent=4))
+        return
+    
+    def generate_offense_list(self):
+        found = self.get_defined_key_found_values("code_analysis")
+        offense_list = []
+        for subdict in found:
+            for header in subdict:
+                if header not in offense_list:
+                    offense_list.append(header)
+        thing = self.extract_values(self.data, offense_list[1])
+        print(thing)
+        return offense_list
+    
+    def get_file_analysis(self):
+        found_file_analysis = self.get_defined_key_found_values("file_analysis")
+        hardcoded_items = {}
+        for value in found_file_analysis:
+            for subdict in value:
+                offense = None
+                for k, v in subdict.items():
+                    if "finding" in k:
+                        offense = v.split()[0]
+                        if offense in hardcoded_items:
+                            hardcoded_items[offense] = hardcoded_items[offense] + 1
+                        else:
+                            hardcoded_items[offense] = 1
+                for k,v in subdict.items():
+                    if "files" in k:
+                        instances = len(v)
+                        if offense.split()[0]+str("-LEN") in hardcoded_items:
+                            hardcoded_items[offense.split()[0]+str("-LEN")] = hardcoded_items[offense.split()[0]+str("-LEN")] + instances
+                        else:
+                            hardcoded_items[offense.split()[0]+str("-LEN")] = instances
+        return hardcoded_items
+    
+    def get_file_analysis_by_genre(self, genre):
+        appIDs = self.get_appIDs_by_genre(genre)
+        hardcoded_items ={}
+        for singular_app in appIDs:
+            app_dict = self.data[singular_app]
+            file_analysis_list = self.get_defined_key_reduced(app_dict,"file_analysis")
+            for value in file_analysis_list:
+                for subdict in value:
+                    offense = None
+                    for k,v in subdict.items():   
+                        if "finding" in k:
+                            offense = v.split()[0]
+                            if offense in hardcoded_items:
+                                hardcoded_items[offense] = hardcoded_items[offense] + 1
+                            else:
+                                hardcoded_items[offense] = 1
+                    for k,v in subdict.items():
+                        if "files" in k:
+                            instances = len(v)
+                            if offense.split()[0]+str("-LEN") in hardcoded_items:
+                                hardcoded_items[offense.split()[0]+str("-LEN")] = hardcoded_items[offense.split()[0]+str("-LEN")] + instances
+                            else:
+                                hardcoded_items[offense.split()[0]+str("-LEN")] = instances
+        return hardcoded_items
+    
 
     def get_genre_count_info(self):
         found_play_store_details = self.get_defined_key_found_values("playstore_details")
@@ -292,10 +461,10 @@ class Analyzer:
             output_list = []
             for value in permissions_list:
                 for k, v in value.items():
-                    if "dangerous" in v['status']:
-                        splitter = k.split(".")
-                        permission_value = splitter[len(splitter)-1]
-                        output_list.append(permission_value)
+                    #if "dangerous" in v['status']:
+                    splitter = k.split(".")
+                    permission_value = splitter[len(splitter)-1]
+                    output_list.append(permission_value)
             
             csv_writer.writerow(output_list)
         output_file.close()
@@ -311,10 +480,10 @@ class Analyzer:
             output_list = []
             for value in permissions_list:
                 for k, v in value.items():
-                    if "dangerous" in v['status']:
-                        splitter = k.split(".")
-                        permission_value = splitter[len(splitter)-1]
-                        output_list.append(permission_value)
+                    #if "dangerous" in v['status']:
+                    splitter = k.split(".")
+                    permission_value = splitter[len(splitter)-1]
+                    output_list.append(permission_value)
                         
             csv_writer.writerow(output_list)
         output_file.close()
@@ -374,8 +543,9 @@ class Analyzer:
     def convert_to_excel(self, input_csv, output_file):
          df = pd.read_csv(input_csv)
          df = df.iloc[::2]
-         trim_frame = self.trim_dataframe(df)
-         trim_frame.to_excel(output_file+".xlsx", index=False)
+         #trim_frame = self.trim_dataframe(df)
+         #trim_frame.to_excel(output_file+".xlsx", index=False)
+         df.to_excel(output_file+'.xlsx', index=False)
          return
          
 
@@ -391,13 +561,16 @@ class Analyzer:
         max_combo_len = rules["combo_len"].max()
         rules.drop(['antecedent support', 'consequent support'], axis=1, inplace=True)
         
+        '''
         #Attempting to make Maximal Rule sets
         save = rules[ (rules["confidence"] > 0.75) &
                      (rules["lift"] > 1.0)&
                      (rules["combo_len"] == max_combo_len)
             ]
-        
-        save.sort_values(["support","lift"], ascending=False, inplace=True)
+        '''
+        save = rules[(rules["confidence"] > 0.75)]
+        save.sort_values(["lift"], ascending=False, inplace=True)
+        #save.sort_values(["support","lift"], ascending=False, inplace=True)
         save.to_csv(output_file+".csv", index= False)
         
         return results
@@ -421,53 +594,67 @@ class Analyzer:
         app_scores = self.get_app_score()
         
         info = {
-            'business_dangerous_permissions': self.permissions_by_genre("BUSINESS"),
-            'business_cert_analysis': self.certificate_analysis_by_genre("BUSINESS"),
-            'business_code_analysis': self.cwe_count_by_genre('BUSINESS'),
-            'social_dangerous_permissions': self.permissions_by_genre('SOCIAL'),
-            'social_cert_analysis': self.certificate_analysis_by_genre('SOCIAL'),
-            'social_code_analysis': self.cwe_count_by_genre('SOCIAL'),
-            'entertainment_dangerous_permissions': self.permissions_by_genre('ENTERTAINMENT'),
-            'entertainment_cert_analysis': self.certificate_analysis_by_genre('ENTERTAINMENT'),
-            'entertainment_code_analysis': self.cwe_count_by_genre('ENTERTAINMENT'),
-            'productivity_dangerous_permissions': self.permissions_by_genre('PRODUCTIVITY'),
-            'productivity_cert_analysis': self.certificate_analysis_by_genre('PRODUCTIVITY'),
-            'productivity_code_analysis': self.cwe_count_by_genre('PRODUCTIVITY'),
-            'education_dangerous_permissions': self.permissions_by_genre('EDUCATION'),
-            'education_cert_analysis': self.certificate_analysis_by_genre('EDUCATION'),
-            'education_code_analysis': self.cwe_count_by_genre('EDUCATION'),
-            'video_players_dangerous_permissions': self.permissions_by_genre('VIDEO_PLAYERS'),
-            'video_players_cert_analysis': self.certificate_analysis_by_genre('VIDEO_PLAYERS'),
-            'video_players_code_analysis': self.cwe_count_by_genre('VIDEO_PLAYERS'),
-            'news_and_magazines_dangerous_permissions': self.permissions_by_genre('NEWS_AND_MAGAZINES'),
-            'news_and_magazines_cert_analysis': self.certificate_analysis_by_genre('NEWS_AND_MAGAZINES'),
-            'news_and_magazines_code_analysis': self.cwe_count_by_genre('NEWS_AND_MAGAZINES'),
-            'photography_dangerous_permissions': self.permissions_by_genre('PHOTOGRAPHY'),
-            'photography_cert_analysis': self.certificate_analysis_by_genre('PHOTOGRAPHY'),
-            'photography_code_analysis': self.cwe_count_by_genre('PHOTOGRAPHY'),
-            'communication_dangerous_permissions': self.permissions_by_genre('COMMUNICATION'),
-            'communication_cert_analysis': self.certificate_analysis_by_genre('COMMUNICATION'),
-            'communication_code_analysis': self.cwe_count_by_genre('COMMUNICATION'),
-            'music_and_audio_dangerous_permissions': self.permissions_by_genre('MUSIC_AND_AUDIO'),
-            'music_and_audio_cert_analysis': self.certificate_analysis_by_genre('MUSIC_AND_AUDIO'),
-            'music_and_audio_code_analysis': self.cwe_count_by_genre('MUSIC_AND_AUDIO'),
-            'tools_dangerous_permissions': self.permissions_by_genre('TOOLS'),
-            'tools_cert_analysis': self.certificate_analysis_by_genre('TOOLS'),
-            'tools_code_analysis': self.cwe_count_by_genre('TOOLS'),
-            'travel_and_local_dangerous_permissions': self.permissions_by_genre('TRAVEL_AND_LOCAL'),
-            'travel_and_local_cert_analysis': self.certificate_analysis_by_genre('TRAVEL_AND_LOCAL'),
-            'travel_and_local_code_analysis': self.cwe_count_by_genre('TRAVEL_AND_LOCAL'),
-            'game_dangerous_permissions': self.permissions_by_genre("GAME"),
-            'game_cert_analysis': self.certificate_analysis_by_genre("GAME"),
-            'game_code_analysis': self.cwe_count_by_genre("GAME"),
             'average_cvss_quartile_info': self.get_quartiles(average_cvss, "Average CSVSS Score"),
             'average_security_score_quartile_info': self.get_quartiles(security_score, "The MobSF Security Score"),
             'average_apk_size': self.get_quartiles(apk_size, "APK Sizes in MB"),
             'permission_dangerous_count': self.get_permissions_dangerous_count_info(),
+            'all_file_analysis': self.get_file_analysis(),
             'all_cert_analysis': self.get_certificate_analysis_good_and_bad_count(), #May want to change string for easy keyin
             'all_code_analysis': self.get_code_analysis(),
             'genre_info': self.get_genre_count_info(),
-            'playstore_scores': self.get_quartiles(app_scores, "Playstore Scores")
+            'playstore_scores': self.get_quartiles(app_scores, "Playstore Scores"),
+            'business_dangerous_permissions': self.permissions_by_genre("BUSINESS"),
+            'business_file_analysis': self.get_file_analysis_by_genre("BUSINESS"),
+            'business_cert_analysis': self.certificate_analysis_by_genre("BUSINESS"),
+            'business_code_analysis': self.cwe_count_by_genre('BUSINESS'),
+            'social_dangerous_permissions': self.permissions_by_genre('SOCIAL'),
+            'social_file_analysis': self.get_file_analysis_by_genre("SOCIAL"),
+            'social_cert_analysis': self.certificate_analysis_by_genre('SOCIAL'),
+            'social_code_analysis': self.cwe_count_by_genre('SOCIAL'),
+            'entertainment_dangerous_permissions': self.permissions_by_genre('ENTERTAINMENT'),
+            'entertainment_file_analysis': self.get_file_analysis_by_genre("ENTERTAINMENT"),
+            'entertainment_cert_analysis': self.certificate_analysis_by_genre('ENTERTAINMENT'),
+            'entertainment_code_analysis': self.cwe_count_by_genre('ENTERTAINMENT'),
+            'productivity_dangerous_permissions': self.permissions_by_genre('PRODUCTIVITY'),
+            'productivity_file_analysis': self.get_file_analysis_by_genre("PRODUCTIVITY"),
+            'productivity_cert_analysis': self.certificate_analysis_by_genre('PRODUCTIVITY'),
+            'productivity_code_analysis': self.cwe_count_by_genre('PRODUCTIVITY'),
+            'education_dangerous_permissions': self.permissions_by_genre('EDUCATION'),
+            'education_file_analysis': self.get_file_analysis_by_genre("EDUCATION"),
+            'education_cert_analysis': self.certificate_analysis_by_genre('EDUCATION'),
+            'education_code_analysis': self.cwe_count_by_genre('EDUCATION'),
+            'video_players_dangerous_permissions': self.permissions_by_genre('VIDEO_PLAYERS'),
+            'video_players_file_analysis': self.get_file_analysis_by_genre("VIDEO_PLAYERS"),
+            'video_players_cert_analysis': self.certificate_analysis_by_genre('VIDEO_PLAYERS'),
+            'video_players_code_analysis': self.cwe_count_by_genre('VIDEO_PLAYERS'),
+            'news_and_magazines_dangerous_permissions': self.permissions_by_genre('NEWS_AND_MAGAZINES'),
+            'news_and_magazines_analysis': self.get_file_analysis_by_genre("NEWS_AND_MAGAZINES"),
+            'news_and_magazines_cert_analysis': self.certificate_analysis_by_genre('NEWS_AND_MAGAZINES'),
+            'news_and_magazines_code_analysis': self.cwe_count_by_genre('NEWS_AND_MAGAZINES'),
+            'photography_dangerous_permissions': self.permissions_by_genre('PHOTOGRAPHY'),
+            'photography_file_analysis': self.get_file_analysis_by_genre("PHOTOGRAPHY"),
+            'photography_cert_analysis': self.certificate_analysis_by_genre('PHOTOGRAPHY'),
+            'photography_code_analysis': self.cwe_count_by_genre('PHOTOGRAPHY'),
+            'communication_dangerous_permissions': self.permissions_by_genre('COMMUNICATION'),
+            'communication_file_analysis': self.get_file_analysis_by_genre("COMMUNICATION"),
+            'communication_cert_analysis': self.certificate_analysis_by_genre('COMMUNICATION'),
+            'communication_code_analysis': self.cwe_count_by_genre('COMMUNICATION'),
+            'music_and_audio_dangerous_permissions': self.permissions_by_genre('MUSIC_AND_AUDIO'),
+            'music_and_audio_file_analysis': self.get_file_analysis_by_genre("MUSIC_AND_AUDIO"),
+            'music_and_audio_cert_analysis': self.certificate_analysis_by_genre('MUSIC_AND_AUDIO'),
+            'music_and_audio_code_analysis': self.cwe_count_by_genre('MUSIC_AND_AUDIO'),
+            'tools_dangerous_permissions': self.permissions_by_genre('TOOLS'),
+            'tools_file_analysis': self.get_file_analysis_by_genre("TOOLS"),
+            'tools_cert_analysis': self.certificate_analysis_by_genre('TOOLS'),
+            'tools_code_analysis': self.cwe_count_by_genre('TOOLS'),
+            'travel_and_local_dangerous_permissions': self.permissions_by_genre('TRAVEL_AND_LOCAL'),
+            'travel_and_local_file_analysis': self.get_file_analysis_by_genre("TRAVEL_AND_LOCAL"),
+            'travel_and_local_cert_analysis': self.certificate_analysis_by_genre('TRAVEL_AND_LOCAL'),
+            'travel_and_local_code_analysis': self.cwe_count_by_genre('TRAVEL_AND_LOCAL'),
+            'game_dangerous_permissions': self.permissions_by_genre("GAME"),
+            'game_file_analysis': self.get_file_analysis_by_genre("GAME"),
+            'game_cert_analysis': self.certificate_analysis_by_genre("GAME"),
+            'game_code_analysis': self.cwe_count_by_genre("GAME")
         }
 
         print(json.dumps(info, indent=4))
@@ -571,6 +758,25 @@ class Analyzer:
         trim_data = data.head(5)
         return trim_data
         
+    def extract_values(self, obj, key):
+        """Pull all values of specified key from nested JSON."""
+        arr = []
+
+        def extract(obj, arr, key):
+            """Recursively search for values of key in JSON tree."""
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    if isinstance(v, (dict, list)):
+                        extract(v, arr, key)
+                    elif k == key:
+                        arr.append(v)
+            elif isinstance(obj, list):
+                for item in obj:
+                    extract(item, arr, key)
+            return arr
+
+        results = extract(obj, arr, key)
+        return results
 
 
 if __name__ == "__main__":
@@ -584,5 +790,16 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     analyze = Analyzer()
-    analyze.process()
-    analyze.data_visualizations()
+    #analyze.get_file_analysis()
+    
+    #analyze.process()
+    '''
+    analyze.headers_code_analysis()
+    analyze.levels_code_analysis()
+    analyze.owasp_code_analysis()
+    analyze.cvss_code_analysis()
+    '''
+    #analyze.deep_code_analysis()
+    analyze.generate_offense_list()
+    
+    #analyze.data_visualizations()
