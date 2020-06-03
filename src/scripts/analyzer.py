@@ -184,6 +184,25 @@ class Analyzer:
             
         print(json.dumps(code_levels, indent=4))
         return code_levels
+    
+    def levels_code_analysis_by_genere(self, genre):
+        appIDs = self.get_appIDs_by_genre(genre)
+        levels_collector = []
+        code_levels = {}
+        for singular_app in appIDs:
+            app_dict = self.data[singular_app]
+            file_analysis_list = self.get_defined_key_reduced(app_dict,"code_analysis")
+            for subdict in file_analysis_list:
+                levels_collector.append(self.extract_values(subdict, 'level'))
+        
+        for section in levels_collector:
+            for level in section:
+                if level in code_levels:
+                    code_levels[level] = code_levels[level] + 1
+                else:
+                    code_levels[level] = 1
+        print(json.dumps(code_levels, indent=4))
+        return code_levels
 
     def owasp_code_analysis(self):
         found_code_analysis = self.get_defined_key_found_values("code_analysis")
@@ -199,7 +218,25 @@ class Analyzer:
                 else:
                     code_owasps[owasp] = 1
                     
-        print(json.dumps(code_owasps, indent=4))
+        return code_owasps
+    
+    def owasp_code_analysis_by_genre(self, genre):
+        appIDs = self.get_appIDs_by_genre(genre)
+        owasp_collector = []
+        code_owasps = {}
+        for singular_app in appIDs:
+            app_dict = self.data[singular_app]
+            file_analysis_list = self.get_defined_key_reduced(app_dict, "code_analysis")
+            for subdict in file_analysis_list:
+                owasp_collector.append(self.extract_values(subdict, 'owasp'))
+                
+        for section in owasp_collector:
+            for owasp in section:
+                if owasp in code_owasps:
+                    code_owasps[owasp] = code_owasps[owasp] + 1
+                else:
+                    code_owasps[owasp] = 1
+        print(json.dumps(code_owasps, indent=4))           
         return code_owasps
     
     def cvss_code_analysis(self):
@@ -216,9 +253,29 @@ class Analyzer:
                 else:
                     code_cvss[cvss] = 1
                     
+        return code_cvss
+    
+    def cvss_code_analysis_by_genre(self, genre):
+        appIDs = self.get_appIDs_by_genre(genre)
+        cvss_collector = []
+        code_cvss = {}
+        for singular_app in appIDs:
+            app_dict = self.data[singular_app]
+            file_analysis_list = self.get_defined_key_reduced(app_dict, "code_analysis")
+            for subdict in file_analysis_list:
+                cvss_collector.append(self.extract_values(subdict, 'cvss'))
+        
+        for section in cvss_collector:
+            for cvss in section:
+                if cvss in code_cvss:
+                    code_cvss[cvss] = code_cvss[cvss] + 1
+                else:
+                    code_cvss[cvss] = 1
+                    
         print(json.dumps(code_cvss, indent=4))
         return code_cvss
     
+    #Very broken, walking away for now....
     def deep_code_analysis(self):
         found_code_analysis = self.get_defined_key_found_values("code_analysis")
         code_analysis_collector = []
@@ -240,6 +297,7 @@ class Analyzer:
                 print(json.dumps(code_dict, indent=4))
         return
     
+    #Not used, broken.
     def generate_offense_list(self):
         found = self.get_defined_key_found_values("code_analysis")
         offense_list = []
@@ -247,7 +305,8 @@ class Analyzer:
             for header in subdict:
                 if header not in offense_list:
                     offense_list.append(header)
-        thing = self.extract_values(self.data, offense_list[1])
+                    print(header)
+        thing = self.extract_values(self.data, 'This App may have root detection capabilities.')
         print(thing)
         return offense_list
     
@@ -797,9 +856,12 @@ if __name__ == "__main__":
     analyze.headers_code_analysis()
     analyze.levels_code_analysis()
     analyze.owasp_code_analysis()
+    
     analyze.cvss_code_analysis()
     '''
     #analyze.deep_code_analysis()
-    analyze.generate_offense_list()
+    analyze.levels_code_analysis_by_genere('PRODUCTIVITY')
+    analyze.owasp_code_analysis_by_genre('PRODUCTIVITY')
+    analyze.cvss_code_analysis_by_genre('PRODUCTIVITY')
     
     #analyze.data_visualizations()
