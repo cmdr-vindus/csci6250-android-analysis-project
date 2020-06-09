@@ -145,27 +145,21 @@ class Analyzer:
                     code_headers[header] = code_headers[header] + 1
                 else:
                     code_headers[header] = 1
-            '''
-            for k,v in subdict.items():
-                if "path" in k:
-                    instances = len(v)
-                    if 'count' in code_items:
-                        code_items['count'] = code_items['count'] + instances
+        return code_headers
+    
+    def headers_code_analysis_by_genre(self, genre):
+        appIDs = self.get_appIDs_by_genre(genre)
+        code_headers = {}
+        for singular_app in appIDs:
+            app_dict = self.data[singular_app]
+            file_analysis_list = self.get_defined_key_reduced(app_dict, 'code_analysis')
+            for subdict in file_analysis_list:
+                for header in subdict:
+                    if header in code_headers:
+                        code_headers[header] = code_headers[header]+1
                     else:
-                        code_items['count'] = instances
-                
-                if "level" in k:
-                    code_items['level'] = v
-                if "cvss" in k:
-                    code_items['cvss'] = v
-                if 'cwe' in k:
-                    code_items['cwe'] = v
-                if 'owasp' in k:
-                    code_items['owasp'] = v
-            '''
-                #code_items_list.append(code_items)
-                #code_items.clear()
-        print(json.dumps(code_headers, indent=4))
+                        code_headers[header] = 1
+                        
         return code_headers
     
     def levels_code_analysis(self):
@@ -182,7 +176,6 @@ class Analyzer:
                 else:
                     code_levels[level] = 1
             
-        print(json.dumps(code_levels, indent=4))
         return code_levels
     
     def levels_code_analysis_by_genere(self, genre):
@@ -201,7 +194,7 @@ class Analyzer:
                     code_levels[level] = code_levels[level] + 1
                 else:
                     code_levels[level] = 1
-        print(json.dumps(code_levels, indent=4))
+       
         return code_levels
 
     def owasp_code_analysis(self):
@@ -236,7 +229,7 @@ class Analyzer:
                     code_owasps[owasp] = code_owasps[owasp] + 1
                 else:
                     code_owasps[owasp] = 1
-        print(json.dumps(code_owasps, indent=4))           
+                  
         return code_owasps
     
     def cvss_code_analysis(self):
@@ -272,7 +265,7 @@ class Analyzer:
                 else:
                     code_cvss[cvss] = 1
                     
-        print(json.dumps(code_cvss, indent=4))
+        
         return code_cvss
     
     #Very broken, walking away for now....
@@ -294,7 +287,7 @@ class Analyzer:
                 else:
                     code_dict['occurances'] = len(self.extract_values(subdict,'path'))
                     
-                print(json.dumps(code_dict, indent=4))
+                #print(json.dumps(code_dict, indent=4))
         return
     
     #Not used, broken.
@@ -639,7 +632,6 @@ class Analyzer:
         return rules
 
     def process(self):
-
         self.generate_cwe_csv(self.genre_list)
         self.generate_permissons_csv(self.genre_list)
         
@@ -662,66 +654,39 @@ class Analyzer:
             'all_code_analysis': self.get_code_analysis(),
             'genre_info': self.get_genre_count_info(),
             'playstore_scores': self.get_quartiles(app_scores, "Playstore Scores"),
-            'business_dangerous_permissions': self.permissions_by_genre("BUSINESS"),
-            'business_file_analysis': self.get_file_analysis_by_genre("BUSINESS"),
-            'business_cert_analysis': self.certificate_analysis_by_genre("BUSINESS"),
-            'business_code_analysis': self.cwe_count_by_genre('BUSINESS'),
-            'social_dangerous_permissions': self.permissions_by_genre('SOCIAL'),
-            'social_file_analysis': self.get_file_analysis_by_genre("SOCIAL"),
-            'social_cert_analysis': self.certificate_analysis_by_genre('SOCIAL'),
-            'social_code_analysis': self.cwe_count_by_genre('SOCIAL'),
-            'entertainment_dangerous_permissions': self.permissions_by_genre('ENTERTAINMENT'),
-            'entertainment_file_analysis': self.get_file_analysis_by_genre("ENTERTAINMENT"),
-            'entertainment_cert_analysis': self.certificate_analysis_by_genre('ENTERTAINMENT'),
-            'entertainment_code_analysis': self.cwe_count_by_genre('ENTERTAINMENT'),
-            'productivity_dangerous_permissions': self.permissions_by_genre('PRODUCTIVITY'),
-            'productivity_file_analysis': self.get_file_analysis_by_genre("PRODUCTIVITY"),
-            'productivity_cert_analysis': self.certificate_analysis_by_genre('PRODUCTIVITY'),
-            'productivity_code_analysis': self.cwe_count_by_genre('PRODUCTIVITY'),
-            'education_dangerous_permissions': self.permissions_by_genre('EDUCATION'),
-            'education_file_analysis': self.get_file_analysis_by_genre("EDUCATION"),
-            'education_cert_analysis': self.certificate_analysis_by_genre('EDUCATION'),
-            'education_code_analysis': self.cwe_count_by_genre('EDUCATION'),
-            'video_players_dangerous_permissions': self.permissions_by_genre('VIDEO_PLAYERS'),
-            'video_players_file_analysis': self.get_file_analysis_by_genre("VIDEO_PLAYERS"),
-            'video_players_cert_analysis': self.certificate_analysis_by_genre('VIDEO_PLAYERS'),
-            'video_players_code_analysis': self.cwe_count_by_genre('VIDEO_PLAYERS'),
-            'news_and_magazines_dangerous_permissions': self.permissions_by_genre('NEWS_AND_MAGAZINES'),
-            'news_and_magazines_analysis': self.get_file_analysis_by_genre("NEWS_AND_MAGAZINES"),
-            'news_and_magazines_cert_analysis': self.certificate_analysis_by_genre('NEWS_AND_MAGAZINES'),
-            'news_and_magazines_code_analysis': self.cwe_count_by_genre('NEWS_AND_MAGAZINES'),
-            'photography_dangerous_permissions': self.permissions_by_genre('PHOTOGRAPHY'),
-            'photography_file_analysis': self.get_file_analysis_by_genre("PHOTOGRAPHY"),
-            'photography_cert_analysis': self.certificate_analysis_by_genre('PHOTOGRAPHY'),
-            'photography_code_analysis': self.cwe_count_by_genre('PHOTOGRAPHY'),
-            'communication_dangerous_permissions': self.permissions_by_genre('COMMUNICATION'),
-            'communication_file_analysis': self.get_file_analysis_by_genre("COMMUNICATION"),
-            'communication_cert_analysis': self.certificate_analysis_by_genre('COMMUNICATION'),
-            'communication_code_analysis': self.cwe_count_by_genre('COMMUNICATION'),
-            'music_and_audio_dangerous_permissions': self.permissions_by_genre('MUSIC_AND_AUDIO'),
-            'music_and_audio_file_analysis': self.get_file_analysis_by_genre("MUSIC_AND_AUDIO"),
-            'music_and_audio_cert_analysis': self.certificate_analysis_by_genre('MUSIC_AND_AUDIO'),
-            'music_and_audio_code_analysis': self.cwe_count_by_genre('MUSIC_AND_AUDIO'),
-            'tools_dangerous_permissions': self.permissions_by_genre('TOOLS'),
-            'tools_file_analysis': self.get_file_analysis_by_genre("TOOLS"),
-            'tools_cert_analysis': self.certificate_analysis_by_genre('TOOLS'),
-            'tools_code_analysis': self.cwe_count_by_genre('TOOLS'),
-            'travel_and_local_dangerous_permissions': self.permissions_by_genre('TRAVEL_AND_LOCAL'),
-            'travel_and_local_file_analysis': self.get_file_analysis_by_genre("TRAVEL_AND_LOCAL"),
-            'travel_and_local_cert_analysis': self.certificate_analysis_by_genre('TRAVEL_AND_LOCAL'),
-            'travel_and_local_code_analysis': self.cwe_count_by_genre('TRAVEL_AND_LOCAL'),
-            'game_dangerous_permissions': self.permissions_by_genre("GAME"),
-            'game_file_analysis': self.get_file_analysis_by_genre("GAME"),
-            'game_cert_analysis': self.certificate_analysis_by_genre("GAME"),
-            'game_code_analysis': self.cwe_count_by_genre("GAME")
+            
         }
-
+        
         print(json.dumps(info, indent=4))
-        with open('../data/info.json', 'w') as f:
+        with open('../data/base-results/all.json', 'w') as f:
             json.dump(info, f)
             
-        return
         
+        
+        for genre in self.genre_list:
+            if genre != 'all':
+                self.genre_analysis(genre)
+        
+        return
+    
+    def genre_analysis(self, genre):
+        low_g = genre.lower()
+        results = {
+                low_g+'_cert_analysis': self.certificate_analysis_by_genre(genre),
+                low_g+'_file_analysis': self.get_file_analysis_by_genre(genre),
+                low_g+'_dangerous_permissions': self.permissions_by_genre(genre),
+                low_g+'_offenses_code_analysis': self.headers_code_analysis_by_genre(genre),
+                low_g+'_cwe_code_analysis': self.cwe_count_by_genre(genre),
+                low_g+'_levels_code_analysis': self.levels_code_analysis_by_genere(genre),
+                low_g+'_owasp_code_analysis': self.owasp_code_analysis_by_genre(genre),
+                low_g+'_cvss_code_analysis': self.cvss_code_analysis_by_genre(genre)
+            }
+        print(json.dumps(results, indent=4))
+        with open('../data/base-results/'+low_g+'.json','w') as f:
+            json.dump(results, f)
+            
+        self.data_visualizations_by_genre(genre)
+        return
 
     def get_quartiles(self, collection, description):
         create_pd = pd.DataFrame(collection, columns=['col_name'], index=None)
@@ -783,6 +748,40 @@ class Analyzer:
         
         return
     
+    def data_visualizations_by_genre(self, genre):
+        with open('../data/base-results/'+genre.lower()+'.json','r') as f:
+            genre_data = json.load(f)
+            
+        sns.set(context='talk', font_scale=0.60)
+        
+        analysis_keys = ['_cert_analysis', '_cwe_code_analysis',
+                         '_levels_code_analysis', '_owasp_code_analysis',
+                         '_cvss_code_analysis', '_file_analysis']
+        
+        for target in analysis_keys:
+            self.genre_vis_helper(genre, target, genre_data)
+        
+        return
+
+    def genre_vis_helper(self, genre, analysis, data):
+        
+        key = genre.lower()+analysis
+        frame = self.dict_to_df(data[key])
+        frame = frame.sort_values('Category')
+        if '_owasp_code_analysis' in analysis:
+            frame["Category"] = [x[0:2] for x in frame["Category"]]
+        elif '_file_analysis' in analysis:
+           frame.drop(frame[frame['Category'] == 'Hardcoded'].index, inplace=True)
+           frame.drop(frame[frame['Category'] == 'Certificate/Key'].index, inplace=True)
+           frame["Category"] = [x.rstrip('-LEN') for x in frame['Category']]
+
+        if '_levels_code_analysis' in analysis:
+            self.plot_bar_chart(frame, title=key, xlabel='Category', ylabel='Count', palette={"good":"g", "high": "r","info":"y", "warning":"b"})
+        else:
+            self.plot_bar_chart(frame, title=key, xlabel='Category', ylabel='Count', palette="Set1")
+
+        return
+
     def dict_to_df(self, data):
         df = pd.DataFrame(list(data.items()), columns=['Category','Count'])
         return df
@@ -801,8 +800,18 @@ class Analyzer:
         path='../data/plots/'
         if '_cert_analysis' in title:
             path = '../data/plots/cert_analysis_plots/'
-        elif '_code_analysis' in title:
-            path='../data/plots/code_analysis_plots/'
+        elif 'cwe_code_analysis' in title:
+            path='../data/plots/cwe_code_analysis_plots/'
+        elif '_levels_code_analysis' in title:
+            path = '../data/plots/levels_code_analysis_plots/'
+        elif '_owasp_code_analysis' in title:
+            path = '../data/plots/owasp_code_analysis_plots/'
+        elif '_cvss_code_analysis' in title:
+            path = '../data/plots/cvss_code_analysis_plots/'
+        elif '_file_analysis' in title:
+            path = '../data/plots/file_analysis_plots/'
+            
+        
         fig.savefig(path+title+'_plot.png')
         
         #Needed for memory consumption
@@ -851,17 +860,7 @@ if __name__ == "__main__":
     analyze = Analyzer()
     #analyze.get_file_analysis()
     
-    #analyze.process()
-    '''
-    analyze.headers_code_analysis()
-    analyze.levels_code_analysis()
-    analyze.owasp_code_analysis()
-    
-    analyze.cvss_code_analysis()
-    '''
-    #analyze.deep_code_analysis()
-    analyze.levels_code_analysis_by_genere('PRODUCTIVITY')
-    analyze.owasp_code_analysis_by_genre('PRODUCTIVITY')
-    analyze.cvss_code_analysis_by_genre('PRODUCTIVITY')
+    analyze.process()
+    #analyze.data_visualizations_by_genre('GAME')
     
     #analyze.data_visualizations()
