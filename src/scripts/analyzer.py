@@ -578,8 +578,8 @@ class Analyzer:
             cwe_output ='../data/cwe-rules/'+genre.lower()+'_cwe_rules'
             perm_input='../data/permission-baskets/'+genre.lower()+'_permissions.csv'
             perm_output='../data/permission-rules/'+genre.lower()+'_permission_rules'
-            self.run_fpgrowth(input_csv=cwe_input, output_file=cwe_output, min_threshold=0.6)
-            self.run_fpgrowth(input_csv=perm_input, output_file=perm_output, min_threshold=0.6)
+            self.run_fpgrowth(input_csv=cwe_input, output_file=cwe_output, genre=genre.lower(), min_threshold=0.6)
+            self.run_fpgrowth(input_csv=perm_input, output_file=perm_output, genre=genre.lower(), min_threshold=0.6)
         return
     
     def auto_rule_trim(self, genre_list):
@@ -601,7 +601,7 @@ class Analyzer:
          return
          
 
-    def run_fpgrowth(self, input_csv, output_file, min_threshold):
+    def run_fpgrowth(self, input_csv, output_file, genre, min_threshold):
         target_df = self.load_baskets_csv(input_csv)
         results = fpgrowth(target_df, min_support=min_threshold, use_colnames=True)
         
@@ -611,7 +611,7 @@ class Analyzer:
         combo_col = rules["antecedent_len"]+rules["consequent_len"]
         rules["combo_len"] = combo_col
         max_combo_len = rules["combo_len"].max()
-        rules.drop(['antecedent support', 'consequent support'], axis=1, inplace=True)
+        new_rules_df = rules.drop(['antecedent support', 'consequent support'], axis=1)
         
         '''
         #Attempting to make Maximal Rule sets
@@ -620,16 +620,40 @@ class Analyzer:
                      (rules["combo_len"] == max_combo_len)
             ]
         '''
-        save = rules[(rules["confidence"] > 0.75)]
-        save.sort_values(["lift"], ascending=False, inplace=True)
-        #save.sort_values(["support","lift"], ascending=False, inplace=True)
-        save.to_csv(output_file+".csv", index= False)
+        save = new_rules_df[(new_rules_df["confidence"] > 0.75)]
         
+        #Finding out the maximum combo_len to
+        #split combo length.
+        self.split_association_rules(output_path=output_file, input_df=save, target=genre)
+        
+        
+        final_df = save.sort_values(["lift"], ascending=False)
+        #save.sort_values(["support","lift"], ascending=False, inplace=True)
+        final_df.to_csv(output_file+".csv", index= False)
+    
         return results
 
     def run_association_rules(self, results_df, threshold):
         rules = association_rules(results_df, metric="confidence", min_threshold=threshold)
         return rules
+    
+    def split_association_rules(self, output_path, input_df, target):
+        split_vals = output_path.split('/')
+        file_name = split_vals[-1]
+        direction = None
+        if 'cwe' in output_path:
+            direction = 'cwe'
+        elif 'permission' in output_path:
+            direction = 'permission'
+        
+        output_dir = '../data/'+direction+'-rules/'+target+'-split-'+direction+'/'
+        for section, section_df in input_df.groupby('combo_len'):
+            new_df = section_df.sort_values(['conviction'], ascending=False)
+            new_df.to_csv(output_dir+str(section)+'_'+target+'_'+direction+'.csv', index=False)
+        
+        return
+
+
 
     def process(self):
         self.generate_cwe_csv(self.genre_list)
@@ -648,13 +672,12 @@ class Analyzer:
             'average_cvss_quartile_info': self.get_quartiles(average_cvss, "Average CSVSS Score"),
             'average_security_score_quartile_info': self.get_quartiles(security_score, "The MobSF Security Score"),
             'average_apk_size': self.get_quartiles(apk_size, "APK Sizes in MB"),
-            'permission_dangerous_count': self.get_permissions_dangerous_count_info(),
+            'playstore_scores': self.get_quartiles(app_scores, "Playstore Scores"),
+            'genre_info': self.get_genre_count_info(),
             'all_file_analysis': self.get_file_analysis(),
             'all_cert_analysis': self.get_certificate_analysis_good_and_bad_count(), #May want to change string for easy keyin
             'all_code_analysis': self.get_code_analysis(),
-            'genre_info': self.get_genre_count_info(),
-            'playstore_scores': self.get_quartiles(app_scores, "Playstore Scores"),
-            
+            'all_permission_dangerous_count': self.get_permissions_dangerous_count_info()
         }
         
         print(json.dumps(info, indent=4))
