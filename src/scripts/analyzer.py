@@ -8,7 +8,6 @@ from mlxtend.frequent_patterns import association_rules, fpgrowth
 from pathlib import Path
 import matplotlib.pyplot as plt
 import seaborn as sns
-import collections
 
 
 class Analyzer:
@@ -132,14 +131,9 @@ class Analyzer:
                 }
     
     def headers_code_analysis(self):
-        found_code_analysis = self.get_defined_key_found_values("code_analysis")
-        #print('found_code_analysis : '+str(type(found_code_analysis)))
-        
+        found_code_analysis = self.get_defined_key_found_values("code_analysis")        
         code_headers = {}
-        code_items_list = []
         for subdict in found_code_analysis:
-            #print(subdict)
-            #print('value : '+str(type(value)))
             for header in subdict:
                 if header in code_headers:
                     code_headers[header] = code_headers[header] + 1
@@ -210,7 +204,8 @@ class Analyzer:
                     code_owasps[owasp] = code_owasps[owasp] + 1
                 else:
                     code_owasps[owasp] = 1
-                    
+        
+        code_owasps = self.clean_dictionary(code_owasps, '')            
         return code_owasps
     
     def owasp_code_analysis_by_genre(self, genre):
@@ -229,7 +224,8 @@ class Analyzer:
                     code_owasps[owasp] = code_owasps[owasp] + 1
                 else:
                     code_owasps[owasp] = 1
-                  
+        
+        code_owasps = self.clean_dictionary(code_owasps, '')        
         return code_owasps
     
     def cvss_code_analysis(self):
@@ -245,7 +241,8 @@ class Analyzer:
                     code_cvss[cvss] = code_cvss[cvss] + 1
                 else:
                     code_cvss[cvss] = 1
-                    
+        
+        code_cvss = self.clean_dictionary(code_cvss, "0")
         return code_cvss
     
     def cvss_code_analysis_by_genre(self, genre):
@@ -265,44 +262,10 @@ class Analyzer:
                 else:
                     code_cvss[cvss] = 1
                     
-        
+        code_cvss = self.clean_dictionary(code_cvss, "0")
         return code_cvss
     
-    #Very broken, walking away for now....
-    def deep_code_analysis(self):
-        found_code_analysis = self.get_defined_key_found_values("code_analysis")
-        code_analysis_collector = []
-        code_dict = {}
-        offense = None
-        for subdict in found_code_analysis:
-            for header in subdict:
-                offense = header
-                if header not in code_dict:
-                    code_dict['offense'] = offense
-                #assuming it is in the dictionary
-                code_dict['app_occ'] = len(self.extract_values(subdict, offense))
-                
-                if 'occurances' in code_dict:
-                    code_dict['occurances'] = code_dict['occurances'] + len(self.extract_values(subdict,'path'))
-                else:
-                    code_dict['occurances'] = len(self.extract_values(subdict,'path'))
-                    
-                #print(json.dumps(code_dict, indent=4))
-        return
-    
-    #Not used, broken.
-    def generate_offense_list(self):
-        found = self.get_defined_key_found_values("code_analysis")
-        offense_list = []
-        for subdict in found:
-            for header in subdict:
-                if header not in offense_list:
-                    offense_list.append(header)
-                    print(header)
-        thing = self.extract_values(self.data, 'This App may have root detection capabilities.')
-        print(thing)
-        return offense_list
-    
+   
     def get_file_analysis(self):
         found_file_analysis = self.get_defined_key_found_values("file_analysis")
         hardcoded_items = {}
@@ -407,7 +370,6 @@ class Analyzer:
 
     def get_app_data_by_genre(self, genre):
         appID_by_genre = self.get_appID_by_genre(genre)
-        #print(appID_by_genre)
         app_data = self.get_data_by_appID(appID_by_genre)
         return app_data
     
@@ -465,7 +427,16 @@ class Analyzer:
                             cwe[v['cwe']] = cwe[v['cwe']] + 1
                         else:
                             cwe[v['cwe']] = 1
+        
+        cwe = self.clean_dictionary(cwe, '')
         return cwe
+    
+    def clean_dictionary(self, dirty_dict, rem_str):
+        try:
+            dirty_dict.pop(rem_str)
+        except KeyError:
+            pass
+        return dirty_dict
     
     def create_cwe_matrix_by_genre(self, genre):
         appIDs = self.get_appIDs_by_genre(genre)
@@ -578,8 +549,8 @@ class Analyzer:
             cwe_output ='../data/cwe-rules/'+genre.lower()+'_cwe_rules'
             perm_input='../data/permission-baskets/'+genre.lower()+'_permissions.csv'
             perm_output='../data/permission-rules/'+genre.lower()+'_permission_rules'
-            self.run_fpgrowth(input_csv=cwe_input, output_file=cwe_output, genre=genre.lower(), min_threshold=0.6)
-            self.run_fpgrowth(input_csv=perm_input, output_file=perm_output, genre=genre.lower(), min_threshold=0.6)
+            self.run_fpgrowth(input_csv=cwe_input, output_file=cwe_output, genre=genre.lower(), min_threshold=0.80)
+            self.run_fpgrowth(input_csv=perm_input, output_file=perm_output, genre=genre.lower(), min_threshold=0.80)
         return
     
     def auto_rule_trim(self, genre_list):
@@ -613,13 +584,6 @@ class Analyzer:
         max_combo_len = rules["combo_len"].max()
         new_rules_df = rules.drop(['antecedent support', 'consequent support'], axis=1)
         
-        '''
-        #Attempting to make Maximal Rule sets
-        save = rules[ (rules["confidence"] > 0.75) &
-                     (rules["lift"] > 1.0)&
-                     (rules["combo_len"] == max_combo_len)
-            ]
-        '''
         save = new_rules_df[(new_rules_df["confidence"] > 0.75)]
         
         #Finding out the maximum combo_len to
@@ -627,8 +591,8 @@ class Analyzer:
         self.split_association_rules(output_path=output_file, input_df=save, target=genre)
         
         
-        final_df = save.sort_values(["lift"], ascending=False)
-        #save.sort_values(["support","lift"], ascending=False, inplace=True)
+        final_df = save.sort_values(["conviction"], ascending=False)
+        
         final_df.to_csv(output_file+".csv", index= False)
     
         return results
@@ -638,8 +602,6 @@ class Analyzer:
         return rules
     
     def split_association_rules(self, output_path, input_df, target):
-        split_vals = output_path.split('/')
-        file_name = split_vals[-1]
         direction = None
         if 'cwe' in output_path:
             direction = 'cwe'
@@ -677,6 +639,7 @@ class Analyzer:
             'all_file_analysis': self.get_file_analysis(),
             'all_cert_analysis': self.get_certificate_analysis_good_and_bad_count(), #May want to change string for easy keyin
             'all_code_analysis': self.get_code_analysis(),
+            'all_code_offenses_analysis': self.headers_code_analysis(),
             'all_permission_dangerous_count': self.get_permissions_dangerous_count_info()
         }
         
@@ -881,9 +844,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     analyze = Analyzer()
-    #analyze.get_file_analysis()
     
     analyze.process()
-    #analyze.data_visualizations_by_genre('GAME')
-    
-    #analyze.data_visualizations()
+
